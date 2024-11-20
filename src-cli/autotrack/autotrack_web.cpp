@@ -67,14 +67,16 @@ void AutoTrackApp::setup_webserver()
                     splitter->set_enabled("fft", true);
                     web_fft_is_enabled = true;
                     logger->trace("Enabling FFT");
-                    web_last_fft_access = time(nullptr);
-                    // TODO check?
-                    // if (fft_plot->bandwidth != 0 && fft_plot->frequency != 0 && !fft_plot->vfo_freqs.empty())
-                    // {
-                    p["vfo_freqs"] = fft_plot->vfo_freqs;
-                    p["fft_values"] = fft_plot->getValues();
-                    // }
                 }
+
+                web_last_fft_access = time(nullptr);
+                // TODO check?
+                // if (fft_plot->bandwidth != 0 && fft_plot->frequency != 0 && !fft_plot->vfo_freqs.empty())
+                // {
+                p["vfo_freqs"] = fft_plot->vfo_freqs;
+                p["fft_values"] = fft_plot->getValues();
+                // }
+
             }
             return p.dump();
         };
