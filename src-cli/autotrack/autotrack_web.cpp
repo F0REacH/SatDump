@@ -72,10 +72,11 @@ void AutoTrackApp::setup_webserver()
                     // if (fft_plot->bandwidth != 0 && fft_plot->frequency != 0 && !fft_plot->vfo_freqs.empty())
                     // {
                     p["vfo_freqs"] = fft_plot->vfo_freqs;
+                    p["fft_values"] = fft_plot->getValues();
                     // }
                 }
             }
-            return p.dump(4);
+            return p.dump();
         };
 
         webserver::add_polarplot_handler = true;

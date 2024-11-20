@@ -252,4 +252,12 @@ namespace widgets
         work_mutex.unlock();
         return img;
     }
+
+    std::vector<float> FFTPlot::getValues()
+    {
+        work_mutex.lock();
+        std::vector<float> vec_values(values, values + values_size);
+        work_mutex.unlock();
+        return vec_values;
+    }
 }

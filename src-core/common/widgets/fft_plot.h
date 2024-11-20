@@ -38,6 +38,8 @@ namespace widgets
             work_mutex.unlock();
         }
 
+        std::vector<float> getValues();
+
         std::vector<std::pair<std::string, double>> vfo_freqs;
     };
 }
