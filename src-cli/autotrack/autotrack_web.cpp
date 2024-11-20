@@ -14,6 +14,7 @@ void AutoTrackApp::setup_webserver()
         webserver::handle_callback = [this]()
         {
             nlohmann::json p;
+            p["api_version"] = "1.0";
 
             live_pipeline_mtx.lock();
             if (live_pipeline)
@@ -53,6 +54,27 @@ void AutoTrackApp::setup_webserver()
                 p["recording"]["written_raw_size"] = file_sink->get_written_raw();
             }
 
+            live_pipeline_mtx.lock();
+            p["upcoming_pass_points"] = object_tracker.getUpcomingPassPoints()["upcoming_pass_points"];
+            live_pipeline_mtx.unlock();
+
+            p["upcoming_satellite_passes"] = auto_scheduler.getSchedule()["upcoming_satellite_passes"];
+
+            if (d_parameters.contains("fft_enable") && d_parameters["fft_enable"])
+            {
+                if (!web_fft_is_enabled)
+                {
+                    splitter->set_enabled("fft", true);
+                    web_fft_is_enabled = true;
+                    logger->trace("Enabling FFT");
+                    web_last_fft_access = time(nullptr);
+                    // TODO check?
+                    // if (fft_plot->bandwidth != 0 && fft_plot->frequency != 0 && !fft_plot->vfo_freqs.empty())
+                    // {
+                    p["vfo_freqs"] = fft_plot->vfo_freqs;
+                    // }
+                }
+            }
             return p.dump(4);
         };
 

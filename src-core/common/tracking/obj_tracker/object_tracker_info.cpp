@@ -141,4 +141,13 @@ namespace satdump
 
         return img;
     }
+
+    nlohmann::json ObjectTracker::getUpcomingPassPoints()
+    {
+        nlohmann::json v;
+        upcoming_passes_mtx.lock();
+        v["upcoming_pass_points"] = upcoming_pass_points;
+        upcoming_passes_mtx.unlock();
+        return v;
+    }
 }

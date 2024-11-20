@@ -11,6 +11,7 @@ namespace satdump
         double aos_time;
         double los_time;
         float max_elevation;
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(SatellitePass, norad, aos_time, los_time, max_elevation);
     };
 
     std::vector<SatellitePass> getPassesForSatellite(int norad, double initial_time, double timespan, double qth_lon, double qth_lat, double qth_alt, std::vector<SatellitePass> premade_passes = {});

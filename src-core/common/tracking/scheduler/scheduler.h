@@ -217,5 +217,7 @@ namespace satdump
         void renderAutotrackConfig(double curr_time);
 
         image::Image getScheduleImage(int width, double curr_time);
+
+        nlohmann::json getSchedule();
     };
 }
