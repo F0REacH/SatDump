@@ -150,7 +150,7 @@ namespace satdump
     public: // Functions
         nlohmann::json getStatus();
         image::Image getPolarPlotImg(int size = 256);
-        nlohmann::json getUpcomingPassPoints();
+        std::vector<SatAzEl> getUpcomingPassPoints();
 
         void setQTH(double qth_lon, double qth_lat, double qth_alt);
         void setObject(TrackingMode mode, int objid);

@@ -142,11 +142,10 @@ namespace satdump
         return img;
     }
 
-    nlohmann::json ObjectTracker::getUpcomingPassPoints()
+    std::vector<ObjectTracker::SatAzEl> ObjectTracker::getUpcomingPassPoints()
     {
-        nlohmann::json v;
         upcoming_passes_mtx.lock();
-        v["upcoming_pass_points"] = upcoming_pass_points;
+        std::vector<SatAzEl> v = upcoming_pass_points;
         upcoming_passes_mtx.unlock();
         return v;
     }

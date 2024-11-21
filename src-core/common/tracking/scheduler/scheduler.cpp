@@ -271,11 +271,10 @@ namespace satdump
         upcoming_satellite_passes_mtx.unlock();
     }
 
-    nlohmann::json AutoTrackScheduler::getSchedule()
+    std::vector<SatellitePass> AutoTrackScheduler::getSchedule()
     {
-        nlohmann::json v;
         upcoming_satellite_passes_mtx.lock();
-        v["upcoming_satellite_passes"] = upcoming_satellite_passes_sel;
+        std::vector<SatellitePass> v = upcoming_satellite_passes_sel;
         upcoming_satellite_passes_mtx.unlock();
         return v;
     }

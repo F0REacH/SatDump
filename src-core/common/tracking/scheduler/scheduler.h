@@ -218,6 +218,6 @@ namespace satdump
 
         image::Image getScheduleImage(int width, double curr_time);
 
-        nlohmann::json getSchedule();
+        std::vector<SatellitePass> getSchedule();
     };
 }
