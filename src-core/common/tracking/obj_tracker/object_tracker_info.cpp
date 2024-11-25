@@ -141,12 +141,4 @@ namespace satdump
 
         return img;
     }
-
-    std::vector<ObjectTracker::SatAzEl> ObjectTracker::getUpcomingPassPoints()
-    {
-        upcoming_passes_mtx.lock();
-        std::vector<SatAzEl> v = upcoming_pass_points;
-        upcoming_passes_mtx.unlock();
-        return v;
-    }
 }

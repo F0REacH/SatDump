@@ -5,6 +5,7 @@
 #include <mutex>
 #include "libs/predict/predict.h"
 #include <thread>
+#include <common/tracking/scheduler/passes.h>
 #include "common/tracking/rotator/rotator_handler.h"
 #include "common/geodetic/geodetic_coordinates.h"
 #include "common/image/image.h"
@@ -150,7 +151,7 @@ namespace satdump
     public: // Functions
         nlohmann::json getStatus();
         image::Image getPolarPlotImg(int size = 256);
-        std::vector<SatAzEl> getUpcomingPassPoints();
+        std::vector<std::vector<SatAzEl>> getUpcomingPassPoints(std::vector<SatellitePass> &upcoming_satellite_passes, int time_steps=50);
 
         void setQTH(double qth_lon, double qth_lat, double qth_alt);
         void setObject(TrackingMode mode, int objid);

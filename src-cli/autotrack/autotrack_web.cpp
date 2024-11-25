@@ -14,7 +14,7 @@ void AutoTrackApp::setup_webserver()
         webserver::handle_callback = [this]()
         {
             nlohmann::json p;
-            p["api_version"] = "1.0";
+            p["api_version"] = "1.1";
 
             live_pipeline_mtx.lock();
             if (live_pipeline)
@@ -55,8 +55,10 @@ void AutoTrackApp::setup_webserver()
             }
 
             live_pipeline_mtx.lock();
-            p["upcoming_pass_points"] = object_tracker.getUpcomingPassPoints();
-            p["upcoming_satellite_passes"] = auto_scheduler.getSchedule();
+            std::vector<satdump::SatellitePass> upcoming_satellite_passes = auto_scheduler.getSchedule();
+            p["upcoming_satellite_passes"] = upcoming_satellite_passes;
+            p["upcoming_pass_points"] = object_tracker.getUpcomingPassPoints(upcoming_satellite_passes);
+
 
             if (d_parameters.contains("fft_enable") && d_parameters["fft_enable"])
             {
