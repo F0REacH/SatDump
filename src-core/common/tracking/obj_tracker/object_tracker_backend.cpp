@@ -310,7 +310,6 @@ namespace satdump
             for (auto & [norad, sat_obj] : norad_to_sat_object)
             {
                 predict_destroy_orbital_elements(sat_obj);
-                delete sat_obj;
             }
         } else {
             logger->warn("Could not get upcoming pass points - tracking_mode != TRACKING_SATELLITE");
