@@ -111,11 +111,21 @@ namespace satdump
 
     void ObjectTracker::setObjects(TrackingMode mode, const std::vector<SatellitePass> &sat_passes)
     {// calculate pass points for each satellite in schedule
+
         if (mode == TRACKING_SATELLITE)
         {
             tracked_satellite_objects_mtx.lock();
-            tracked_satellite_passes = sat_passes;
-            tracked_satellite_pass_points.clear(); // clear previous pass points
+            // fill with data
+            tracked_satellite_objects.clear();
+            for(const auto& [norad, aos_time, los_time, max_elevation] : sat_passes)
+            {
+                TrackedObject tracked_object;
+                tracked_object.norad = norad;
+                tracked_object.aos_time = aos_time;
+                tracked_object.los_time = los_time;
+                tracked_object.max_elevation = max_elevation;
+                tracked_satellite_objects.push_back(tracked_object);
+            }
 
             // clear previous sat objects
             for (auto & [norad, sat_obj] : norad_to_sat_object)
@@ -124,25 +134,29 @@ namespace satdump
             }
             norad_to_sat_object.clear();
 
+            std::map<int, std::string> norad_to_sat_object_name;
             // find all relevant sat objects in registry and update
-            for(const SatellitePass& satellite_pass : tracked_satellite_passes)
+            for(const TrackedObject& tr_obj : tracked_satellite_objects)
             {   // skip already found objects
-                if (!norad_to_sat_object.count(satellite_pass.norad))
+                if (!norad_to_sat_object.count(tr_obj.norad))
                 {
-                    for (auto & tle : general_tle_registry)
+                    const auto optionalTLE = general_tle_registry.get_from_norad(tr_obj.norad);
+                    if (!optionalTLE.has_value())
                     {
-                        if (tle.norad == satellite_pass.norad)
-                        {
-                            norad_to_sat_object.insert({tle.norad, predict_parse_tle(tle.line1.c_str(), tle.line2.c_str())});
-                            break;
-                        }
+                        logger->warn("Could not find in tle registry norad:"+std::to_string(tr_obj.norad));
+                        break;
                     }
+                    auto tle = optionalTLE.value();
+                    norad_to_sat_object_name.insert({tle.norad, tle.name});
+                    const auto name = tle.name;
+                    logger->trace("Found TLE entry for: "+name);
+                    norad_to_sat_object.insert({tr_obj.norad, predict_parse_tle(tle.line1.c_str(), tle.line2.c_str())});
                 }
             }
             // Calculate pass point for each upcoming satellite
-            for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : tracked_satellite_passes)
+            for (auto &tr_obj : tracked_satellite_objects)
             {
-                const auto satellite_object = norad_to_sat_object[norad];
+                const auto satellite_object = norad_to_sat_object[tr_obj.norad];
 
                 std::vector<SatAzEl> curr_sat_upcoming_pass_points;
                 if (!predict_is_geosynchronous(satellite_object)) // TODO test on geosynchronous
@@ -152,21 +166,25 @@ namespace satdump
                     predict_position satellite_orbit2;
                     predict_observation observation_pos2;
 
-                    double time_step = abs(next_los_time - next_aos_time) / time_steps;
-                    for (double ctime = next_aos_time; ctime <= next_los_time; ctime += time_step)
+                    double time_step = abs(tr_obj.los_time - tr_obj.aos_time) / time_steps;
+                    for (double ctime = tr_obj.aos_time; ctime <= tr_obj.los_time; ctime += time_step)
                     {
                         predict_orbit(satellite_object, &satellite_orbit2, predict_to_julian_double(ctime));
                         predict_observe_orbit(satellite_observer_station, &satellite_orbit2, &observation_pos2);
                         curr_sat_upcoming_pass_points.push_back({
-                            float(observation_pos2.azimuth * RAD_TO_DEG), float(observation_pos2.elevation * RAD_TO_DEG)
+                            float(observation_pos2.azimuth * RAD_TO_DEG),
+                            float(observation_pos2.elevation * RAD_TO_DEG)
                         });
                     }
-                } else
+                }
+                else
                 {
                     // FIXME push single point for geosynchronous?
                     logger->warn("Skipping geosynchronous satellite");
                 }
-                tracked_satellite_pass_points.push_back(curr_sat_upcoming_pass_points);
+
+                tr_obj.pass_points = curr_sat_upcoming_pass_points;
+                tr_obj.name = norad_to_sat_object_name[tr_obj.norad];
             }
             tracked_satellite_objects_mtx.unlock();
         } else { logger->warn("Only TRACKING_SATELLITE mode is supported!"); }

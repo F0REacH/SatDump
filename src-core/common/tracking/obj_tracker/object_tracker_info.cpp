@@ -146,42 +146,48 @@ namespace satdump
 
     nlohmann::json ObjectTracker::getTrackedSatelliteObjects()
     {
-        nlohmann::json v;
         tracked_satellite_objects_mtx.lock();
-        v["tracked_satellite_passes"] = tracked_satellite_passes;
-        v["tracked_satellite_pass_points"] = tracked_satellite_pass_points;
-
-        std::vector<SatAzEl> tracked_satellite_current_pos;
+        // update satellite positions if needed
         double current_time = getTime();
-        for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : tracked_satellite_passes)
+        for(auto& tr_obj : tracked_satellite_objects)
         {
-            SatAzEl sat_current_pos;
-            if (norad_to_sat_object.count(norad))
+            if (norad_to_sat_object.count(tr_obj.norad))
             {
+                // update event timer
+                double timeOffset = 0;
+                if (tr_obj.aos_time > current_time)
+                    timeOffset = tr_obj.aos_time - current_time;
+                else
+                    timeOffset = tr_obj.los_time - current_time;
+
+                tr_obj.next_event_in = timeOffset;
+                tr_obj.next_event_is_aos = tr_obj.aos_time > current_time;
+
+
                 // calculate only within time window
-                if (current_time < next_los_time && current_time > next_aos_time)
+                if (current_time > tr_obj.aos_time && current_time < tr_obj.los_time)
                 {
-                    const predict_orbital_elements_t *satellite_object = norad_to_sat_object[norad]; // FIXME use stored sat objects!
                     predict_position satellite_orbit;
                     predict_observation satellite_observation_pos;
-                    predict_orbit(satellite_object, &satellite_orbit, predict_to_julian_double(current_time));
+                    predict_orbit(norad_to_sat_object[tr_obj.norad], &satellite_orbit, predict_to_julian_double(current_time));
 
                     general_mutex.lock(); // NOTE lock just in case observer station changes?
                     predict_observe_orbit(satellite_observer_station, &satellite_orbit, &satellite_observation_pos);
                     general_mutex.unlock();
 
-                    sat_current_pos.az = satellite_observation_pos.azimuth * RAD_TO_DEG;
-                    sat_current_pos.el = satellite_observation_pos.elevation * RAD_TO_DEG;
+                    tr_obj.current_position.az = satellite_observation_pos.azimuth * RAD_TO_DEG;
+                    tr_obj.current_position.el = satellite_observation_pos.elevation * RAD_TO_DEG;
+                } else
+                {
+                    tr_obj.current_position.az = 0;
+                    tr_obj.current_position.el = 0;
                 }
             } else
             {
-                logger->warn("Could not find norad in registry! norad:"+std::to_string(norad));
+                logger->warn("Could not find norad in registry! norad:"+std::to_string(tr_obj.norad));
             }
-
-            tracked_satellite_current_pos.push_back(sat_current_pos);
         }
-
-        v["tracked_satellite_current_pos"] = tracked_satellite_current_pos;
+        nlohmann::json v = tracked_satellite_objects;
         tracked_satellite_objects_mtx.unlock();
         return v;
     }

@@ -29,6 +29,16 @@ namespace satdump
             NLOHMANN_DEFINE_TYPE_INTRUSIVE(SatAzEl, az, el);
         };
 
+        struct TrackedObject : SatellitePass
+        {
+            std::vector<SatAzEl> pass_points;
+            SatAzEl current_position;
+            std::string name;
+            double next_event_in = -1;
+            bool next_event_is_aos = true;
+            NLOHMANN_DEFINE_TYPE_INTRUSIVE(TrackedObject, norad, aos_time, los_time, max_elevation, pass_points, current_position, name, next_event_in, next_event_is_aos);
+        };
+
     private: // QTH Config
         double qth_lon = 0;
         double qth_lat = 0;
@@ -123,8 +133,7 @@ namespace satdump
         SatAzEl sat_next_los_pos;
 
         std::mutex tracked_satellite_objects_mtx;
-        std::vector<SatellitePass> tracked_satellite_passes;
-        std::vector<std::vector<SatAzEl>> tracked_satellite_pass_points;
+        std::vector<TrackedObject> tracked_satellite_objects;
         std::map<int, predict_orbital_elements_t*> norad_to_sat_object;
     private: // Rotator control
         bool rotator_engaged = false;
