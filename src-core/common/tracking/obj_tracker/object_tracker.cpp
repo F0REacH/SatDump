@@ -113,9 +113,9 @@ namespace satdump
     {// calculate pass points for each satellite in schedule
         if (mode == TRACKING_SATELLITE)
         {
-            upcoming_satellite_passes_mtx.lock();
-            upcoming_satellite_passes = sat_passes;
-            upcoming_satellite_pass_points.clear(); // clear previous pass points
+            tracked_satellite_objects_mtx.lock();
+            tracked_satellite_passes = sat_passes;
+            tracked_satellite_pass_points.clear(); // clear previous pass points
 
             // clear previous sat objects
             for (auto & [norad, sat_obj] : norad_to_sat_object)
@@ -125,7 +125,7 @@ namespace satdump
             norad_to_sat_object.clear();
 
             // find all relevant sat objects in registry and update
-            for(const SatellitePass& satellite_pass : upcoming_satellite_passes)
+            for(const SatellitePass& satellite_pass : tracked_satellite_passes)
             {   // skip already found objects
                 if (!norad_to_sat_object.count(satellite_pass.norad))
                 {
@@ -140,7 +140,7 @@ namespace satdump
                 }
             }
             // Calculate pass point for each upcoming satellite
-            for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : upcoming_satellite_passes)
+            for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : tracked_satellite_passes)
             {
                 const auto satellite_object = norad_to_sat_object[norad];
 
@@ -166,9 +166,9 @@ namespace satdump
                     // FIXME push single point for geosynchronous?
                     logger->warn("Skipping geosynchronous satellite");
                 }
-                upcoming_satellite_pass_points.push_back(curr_sat_upcoming_pass_points);
+                tracked_satellite_pass_points.push_back(curr_sat_upcoming_pass_points);
             }
-            upcoming_satellite_passes_mtx.unlock();
+            tracked_satellite_objects_mtx.unlock();
         } else { logger->warn("Only TRACKING_SATELLITE mode is supported!"); }
     }
 

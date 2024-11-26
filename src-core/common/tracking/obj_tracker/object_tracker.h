@@ -122,9 +122,9 @@ namespace satdump
         SatAzEl sat_next_aos_pos;
         SatAzEl sat_next_los_pos;
 
-        std::mutex upcoming_satellite_passes_mtx;
-        std::vector<SatellitePass> upcoming_satellite_passes;
-        std::vector<std::vector<SatAzEl>> upcoming_satellite_pass_points;
+        std::mutex tracked_satellite_objects_mtx;
+        std::vector<SatellitePass> tracked_satellite_passes;
+        std::vector<std::vector<SatAzEl>> tracked_satellite_pass_points;
         std::map<int, predict_orbital_elements_t*> norad_to_sat_object;
     private: // Rotator control
         bool rotator_engaged = false;
@@ -155,7 +155,7 @@ namespace satdump
     public: // Functions
         nlohmann::json getStatus();
         image::Image getPolarPlotImg(int size = 256);
-        nlohmann::json getUpcomingSatellitePassesWithPredictions();
+        nlohmann::json getTrackedSatelliteObjects();
 
         void setQTH(double qth_lon, double qth_lat, double qth_alt);
         void setObject(TrackingMode mode, int objid);

@@ -55,7 +55,7 @@ void AutoTrackApp::setup_webserver()
             }
 
             live_pipeline_mtx.lock();
-            p["upcoming_satellite_passes"] = object_tracker.getUpcomingSatellitePassesWithPredictions();
+            p["tracked_satellite_objects"] = object_tracker.getTrackedSatelliteObjects();
 
 
             if (d_parameters.contains("fft_enable") && d_parameters["fft_enable"])

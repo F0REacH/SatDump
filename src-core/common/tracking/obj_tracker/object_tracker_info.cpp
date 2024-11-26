@@ -144,16 +144,16 @@ namespace satdump
         return img;
     }
 
-    nlohmann::json ObjectTracker::getUpcomingSatellitePassesWithPredictions()
+    nlohmann::json ObjectTracker::getTrackedSatelliteObjects()
     {
         nlohmann::json v;
-        upcoming_satellite_passes_mtx.lock();
-        v["upcoming_satellite_passes"] = upcoming_satellite_passes;
-        v["upcoming_satellite_pass_points"] = upcoming_satellite_pass_points;
+        tracked_satellite_objects_mtx.lock();
+        v["tracked_satellite_passes"] = tracked_satellite_passes;
+        v["tracked_satellite_pass_points"] = tracked_satellite_pass_points;
 
-        std::vector<SatAzEl> upcoming_satellite_current_pos;
+        std::vector<SatAzEl> tracked_satellite_current_pos;
         double current_time = getTime();
-        for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : upcoming_satellite_passes)
+        for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : tracked_satellite_passes)
         {
             SatAzEl sat_current_pos;
             if (norad_to_sat_object.count(norad))
@@ -178,11 +178,11 @@ namespace satdump
                 logger->warn("Could not find norad in registry! norad:"+std::to_string(norad));
             }
 
-            upcoming_satellite_current_pos.push_back(sat_current_pos);
+            tracked_satellite_current_pos.push_back(sat_current_pos);
         }
 
-        v["upcoming_satellite_current_pos"] = upcoming_satellite_current_pos;
-        upcoming_satellite_passes_mtx.unlock();
+        v["tracked_satellite_current_pos"] = tracked_satellite_current_pos;
+        tracked_satellite_objects_mtx.unlock();
         return v;
     }
 }
