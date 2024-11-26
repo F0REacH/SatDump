@@ -93,6 +93,7 @@ namespace satdump
                         if (v.norad == upcoming_satellite_passes_sel[0].norad)
                             obj = v;
                     eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
+                    eng_all_callback(upcoming_satellite_passes_sel);
                 }
             }
             else
@@ -131,6 +132,7 @@ namespace satdump
                             if (v.norad == upcoming_satellite_passes_sel[0].norad)
                                 obj = v;
                         eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
+                        eng_all_callback(upcoming_satellite_passes_sel);
                     }
                 }
             }
@@ -217,6 +219,7 @@ namespace satdump
                 if (v.norad == upcoming_satellite_passes_sel[0].norad)
                     obj = v;
             eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
+            eng_all_callback(upcoming_satellite_passes_sel);
             autotrack_pass_has_started = false;
         }
         else

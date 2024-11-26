@@ -1,3 +1,5 @@
+#include <logger.h>
+
 #include "object_tracker.h"
 #include "common/utils.h"
 
@@ -140,5 +142,47 @@ namespace satdump
         }
 
         return img;
+    }
+
+    nlohmann::json ObjectTracker::getUpcomingSatellitePassesWithPredictions()
+    {
+        nlohmann::json v;
+        upcoming_satellite_passes_mtx.lock();
+        v["upcoming_satellite_passes"] = upcoming_satellite_passes;
+        v["upcoming_satellite_pass_points"] = upcoming_satellite_pass_points;
+
+        std::vector<SatAzEl> upcoming_satellite_current_pos;
+        double current_time = getTime();
+        for(const auto& [norad, next_aos_time, next_los_time, max_elevation] : upcoming_satellite_passes)
+        {
+            SatAzEl sat_current_pos;
+            if (norad_to_sat_object.count(norad))
+            {
+                // calculate only within time window
+                if (current_time < next_los_time && current_time > next_aos_time)
+                {
+                    const predict_orbital_elements_t *satellite_object = norad_to_sat_object[norad]; // FIXME use stored sat objects!
+                    predict_position satellite_orbit;
+                    predict_observation satellite_observation_pos;
+                    predict_orbit(satellite_object, &satellite_orbit, predict_to_julian_double(current_time));
+
+                    general_mutex.lock(); // NOTE lock just in case observer station changes?
+                    predict_observe_orbit(satellite_observer_station, &satellite_orbit, &satellite_observation_pos);
+                    general_mutex.unlock();
+
+                    sat_current_pos.az = satellite_observation_pos.azimuth * RAD_TO_DEG;
+                    sat_current_pos.el = satellite_observation_pos.elevation * RAD_TO_DEG;
+                }
+            } else
+            {
+                logger->warn("Could not find norad in registry! norad:"+std::to_string(norad));
+            }
+
+            upcoming_satellite_current_pos.push_back(sat_current_pos);
+        }
+
+        v["upcoming_satellite_current_pos"] = upcoming_satellite_current_pos;
+        upcoming_satellite_passes_mtx.unlock();
+        return v;
     }
 }

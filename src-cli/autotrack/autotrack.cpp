@@ -224,6 +224,11 @@ retry_vfo:
 
 void AutoTrackApp::setup_schedular_callbacks()
 {
+    auto_scheduler.eng_all_callback = [this](const std::vector<satdump::SatellitePass>& upcoming_satellite_passes)
+    {
+        object_tracker.setObjects(object_tracker.TRACKING_SATELLITE, upcoming_satellite_passes);
+    };
+
     auto_scheduler.eng_callback = [this](satdump::AutoTrackCfg, satdump::SatellitePass, satdump::TrackedObject obj)
     {
         // logger->critical(obj.norad);

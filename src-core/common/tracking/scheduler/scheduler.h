@@ -183,6 +183,7 @@ namespace satdump
         std::function<void(AutoTrackCfg, SatellitePass, TrackedObject)> eng_callback = [](AutoTrackCfg, SatellitePass, TrackedObject) {};
         std::function<void(AutoTrackCfg, SatellitePass, TrackedObject)> aos_callback = [](AutoTrackCfg, SatellitePass, TrackedObject) {};
         std::function<void(AutoTrackCfg, SatellitePass, TrackedObject)> los_callback = [](AutoTrackCfg, SatellitePass, TrackedObject) {};
+        std::function<void(const std::vector<SatellitePass>&)> eng_all_callback = [](const std::vector<SatellitePass>&) {};
 
     private:
         int tracking_sats_menu_selected_1 = 0, tracking_sats_menu_selected_2 = 0;

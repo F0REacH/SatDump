@@ -55,9 +55,7 @@ void AutoTrackApp::setup_webserver()
             }
 
             live_pipeline_mtx.lock();
-            std::vector<satdump::SatellitePass> upcoming_satellite_passes = auto_scheduler.getSchedule();
-            p["upcoming_satellite_passes"] = upcoming_satellite_passes;
-            p["upcoming_pass_points"] = object_tracker.getUpcomingPassPoints(upcoming_satellite_passes);
+            p["upcoming_satellite_passes"] = object_tracker.getUpcomingSatellitePassesWithPredictions();
 
 
             if (d_parameters.contains("fft_enable") && d_parameters["fft_enable"])
