@@ -14,26 +14,22 @@ namespace satdump
             obj_name = horizonsoptions[current_horizons_id].second;
         else if (tracking_mode == TRACKING_SATELLITE)
             obj_name = satoptions[current_satellite_id];
-        v["object_name"] = obj_name;
-        v["sat_current_pos"] = sat_current_pos;
+        v["name"] = obj_name;
+        v["current_position"] = sat_current_pos;
 
         if (tracking_mode == TRACKING_SATELLITE && satellite_object != nullptr)
         {
             v["sat_azimuth_rate"] = satellite_observation_pos.azimuth_rate * RAD_TO_DEG;
             v["sat_elevation_rate"] = satellite_observation_pos.elevation_rate * RAD_TO_DEG;
             v["sat_current_range"] = satellite_observation_pos.range;
+            v["pass_points"] = getPassPoints(satellite_object, next_aos_time, next_los_time);
         }
 
-        v["next_aos_time"] = next_aos_time;
-        v["next_los_time"] = next_los_time;
+        v["aos_time"] = next_aos_time;
+        v["los_time"] = next_los_time;
 
-        double timeOffset = 0, ctime = getTime();
-        if (next_aos_time > ctime)
-            timeOffset = next_aos_time - ctime;
-        else
-            timeOffset = next_los_time - ctime;
-
-        v["next_event_in"] = timeOffset;
+        double ctime = getTime();
+        v["next_event_in"] = getNextEventIn(ctime, next_aos_time, next_los_time);
         v["next_event_is_aos"] = next_aos_time > ctime;
 
         v["rotator_engaged"] = rotator_engaged;
@@ -144,43 +140,68 @@ namespace satdump
         return img;
     }
 
+    ObjectTracker::SatAzEl ObjectTracker::getPredictionPoint(const predict_orbital_elements_t *satellite_object, const double prediction_time) const
+    {
+        predict_position satellite_orbit2;
+        predict_observation observation_pos2;
+
+        predict_orbit(satellite_object, &satellite_orbit2, predict_to_julian_double(prediction_time));
+        predict_observe_orbit(satellite_observer_station, &satellite_orbit2, &observation_pos2);
+
+        return {
+            float(observation_pos2.azimuth * RAD_TO_DEG),
+            float(observation_pos2.elevation * RAD_TO_DEG)
+        };
+    }
+
+    std::vector<ObjectTracker::SatAzEl> ObjectTracker::getPassPoints(const predict_orbital_elements_t *satellite_object, const double aos_time, const double los_time, const int time_steps) const
+    {
+        std::vector<SatAzEl> pass_points;
+        if (!predict_is_geosynchronous(satellite_object))
+        {
+            double time_step = abs(los_time - aos_time) / time_steps;
+            for (double ctime = aos_time; ctime <= los_time; ctime += time_step)
+            {
+                pass_points.push_back(getPredictionPoint(satellite_object, ctime));
+            }
+        }
+        else
+        {
+            logger->warn("Skipping geosynchronous satellite");
+        }
+        return pass_points;
+    }
+
+    double ObjectTracker::getNextEventIn(double ctime, double aos_time, double los_time)
+    {
+        double timeOffset = 0;
+        if (aos_time > ctime)
+            timeOffset = aos_time - ctime;
+        else
+            timeOffset = los_time - ctime;
+        return timeOffset;
+    }
+
     nlohmann::json ObjectTracker::getTrackedSatelliteObjects()
     {
         tracked_satellite_objects_mtx.lock();
         // update satellite positions if needed
-        double current_time = getTime();
+
         for(auto& tr_obj : tracked_satellite_objects)
         {
             if (norad_to_sat_object.count(tr_obj.norad))
             {
-                // update event timer
-                double timeOffset = 0;
-                if (tr_obj.aos_time > current_time)
-                    timeOffset = tr_obj.aos_time - current_time;
-                else
-                    timeOffset = tr_obj.los_time - current_time;
-
-                tr_obj.next_event_in = timeOffset;
+                const double current_time = getTime();
+                tr_obj.next_event_in = getNextEventIn(current_time, tr_obj.aos_time, tr_obj.los_time);
                 tr_obj.next_event_is_aos = tr_obj.aos_time > current_time;
-
 
                 // calculate only within time window
                 if (current_time > tr_obj.aos_time && current_time < tr_obj.los_time)
                 {
-                    predict_position satellite_orbit;
-                    predict_observation satellite_observation_pos;
-                    predict_orbit(norad_to_sat_object[tr_obj.norad], &satellite_orbit, predict_to_julian_double(current_time));
-
-                    general_mutex.lock(); // NOTE lock just in case observer station changes?
-                    predict_observe_orbit(satellite_observer_station, &satellite_orbit, &satellite_observation_pos);
-                    general_mutex.unlock();
-
-                    tr_obj.current_position.az = satellite_observation_pos.azimuth * RAD_TO_DEG;
-                    tr_obj.current_position.el = satellite_observation_pos.elevation * RAD_TO_DEG;
+                    tr_obj.current_position = getPredictionPoint(norad_to_sat_object[tr_obj.norad], current_time);
                 } else
                 {
-                    tr_obj.current_position.az = 0;
-                    tr_obj.current_position.el = 0;
+                    tr_obj.current_position = SatAzEl();
                 }
             } else
             {

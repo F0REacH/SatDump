@@ -163,23 +163,23 @@ void AutoTrackApp::setup_webserver()
                                    "<h2>Object Tracker</h2>" +
                                    "<div class=\"image-div\"><img src=\"polarplot.jpeg?r=" + std::to_string(cache_buster) + "\" width=256 height=256/></div>" +
                                    "<p>Next AOS time: <span class=\"fakeinput\">" +
-                                   timestamp_to_string(status["next_aos_time"].get<double>(), auto_scheduler.getAutoTrackCfg().use_localtime) +
+                                   timestamp_to_string(status["aos_time"].get<double>(), auto_scheduler.getAutoTrackCfg().use_localtime) +
                                    "</span>" +
                                    aos_in +
                                    "</p>" +
                                    "<p>Next LOS time: <span class=\"fakeinput\">" +
-                                   timestamp_to_string(status["next_los_time"].get<double>(), auto_scheduler.getAutoTrackCfg().use_localtime) +
+                                   timestamp_to_string(status["los_time"].get<double>(), auto_scheduler.getAutoTrackCfg().use_localtime) +
                                    "</span>" +
                                    los_in +
                                    "</p>" +
                                    "<p>Current object: <span class=\"fakeinput\">" +
-                                   status["object_name"].get<std::string>() +
+                                   status["name"].get<std::string>() +
                                    "</span></p>" +
                                    "<p>Current position:<br />" +
                                    "Azimuth <span class=\"fakeinput\">" +
-                                   svformat("%.2f", (status["sat_current_pos"]["az"].get<double>())) +
+                                   svformat("%.2f", (status["current_position"]["az"].get<double>())) +
                                    "</span> °<br />Elevation <span class=\"fakeinput\">" +
-                                   svformat("%.2f", (status["sat_current_pos"]["el"].get<double>())) +
+                                   svformat("%.2f", (status["current_position"]["el"].get<double>())) +
                                    "</span> °<br /> Range <span class=\"fakeinput\">" +
                                    svformat("%.2f", (status["sat_current_range"].get<double>())) +
                                    "</span> km</p>" +

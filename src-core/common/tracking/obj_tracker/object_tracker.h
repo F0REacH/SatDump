@@ -52,6 +52,10 @@ namespace satdump
         inline float az_el_to_plot_x(float plot_size, float radius, float az, float el) { return sin(az * DEG_TO_RAD) * plot_size * radius * ((90.0 - el) / 90.0); }
         inline float az_el_to_plot_y(float plot_size, float radius, float az, float el) { return cos(az * DEG_TO_RAD) * plot_size * radius * ((90.0 - el) / 90.0); }
 
+        SatAzEl getPredictionPoint(const predict_orbital_elements_t *satellite_object, double prediction_time) const;
+        std::vector<SatAzEl> getPassPoints(const predict_orbital_elements_t *satellite_object, double aos_time, double los_time, int time_steps=50) const;
+        static double getNextEventIn(double current_time, double aos_time, double los_time);
+
     private: // Satellite Tracking (libpredict)
         std::vector<std::string> satoptions;
         int current_satellite_id = 0;

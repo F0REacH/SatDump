@@ -156,34 +156,7 @@ namespace satdump
             // Calculate pass point for each upcoming satellite
             for (auto &tr_obj : tracked_satellite_objects)
             {
-                const auto satellite_object = norad_to_sat_object[tr_obj.norad];
-
-                std::vector<SatAzEl> curr_sat_upcoming_pass_points;
-                if (!predict_is_geosynchronous(satellite_object)) // TODO test on geosynchronous
-                {
-                    constexpr int time_steps = 50;
-                    // Calculate a few points during the pass
-                    predict_position satellite_orbit2;
-                    predict_observation observation_pos2;
-
-                    double time_step = abs(tr_obj.los_time - tr_obj.aos_time) / time_steps;
-                    for (double ctime = tr_obj.aos_time; ctime <= tr_obj.los_time; ctime += time_step)
-                    {
-                        predict_orbit(satellite_object, &satellite_orbit2, predict_to_julian_double(ctime));
-                        predict_observe_orbit(satellite_observer_station, &satellite_orbit2, &observation_pos2);
-                        curr_sat_upcoming_pass_points.push_back({
-                            float(observation_pos2.azimuth * RAD_TO_DEG),
-                            float(observation_pos2.elevation * RAD_TO_DEG)
-                        });
-                    }
-                }
-                else
-                {
-                    // FIXME push single point for geosynchronous?
-                    logger->warn("Skipping geosynchronous satellite");
-                }
-
-                tr_obj.pass_points = curr_sat_upcoming_pass_points;
+                tr_obj.pass_points = getPassPoints(norad_to_sat_object[tr_obj.norad], tr_obj.aos_time, tr_obj.los_time);
                 tr_obj.name = norad_to_sat_object_name[tr_obj.norad];
             }
             tracked_satellite_objects_mtx.unlock();
