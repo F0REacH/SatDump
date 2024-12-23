@@ -978,18 +978,6 @@
                     },
                     "NDVI": {
                         "channels": "cch1, cch2",
-                        "calib_cfg": {
-                            "cch1": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
-                            "cch2": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            }
-                        },
                         "lua": "scripted_compos/ndvi.lua",
                         "description": "descriptions/NDVI.md",
                         "autogen": false,
@@ -1057,6 +1045,7 @@
                         "equation": "cch1, cch2, 1-cch4",
                         "description": "descriptions/124.md",
                         "geo_correct": true,
+                        "individual_equalize": true,
                         "project": {
                             "draw_map_overlay": true,
                             "config": {
@@ -1070,16 +1059,6 @@
                             }
                         },
                         "calib_cfg": {
-                            "cch1": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
-                            "cch2": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
                             "cch4": {
                                 "type": "temperature",
                                 "min": 203,
@@ -1119,16 +1098,12 @@
                         "equation": "cch1, cch3a, cch4",
                         "description": "descriptions/DayMicro.md",
                         "geo_correct": true,
+                        "equalize": true,
                         "calib_cfg": {
-                            "cch1": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
                             "cch3a": {
-                                "type": "albedo",
+                                "type": "radiance",
                                 "min": 0,
-                                "max": 0.7
+                                "max": 1.4
                             },
                             "cch4": {
                                 "type": "temperature",
@@ -1140,11 +1115,6 @@
                     "Day Cloud Convection": {
                         "equation": "cch1^0.58823529411,cch1^0.58823529411,1-cch4",
                         "calib_cfg": {
-                            "cch1": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
                             "cch4": {
                                 "type": "temperature",
                                 "min": 203,
@@ -1246,16 +1216,6 @@
                     "NDVI": {
                         "channels": "cch1, cch2",
                         "calib_cfg": {
-                            "cch1": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
-                            "cch2": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            }
                         },
                         "lua": "scripted_compos/ndvi.lua",
                         "description": "descriptions/NDVI.md",
@@ -1265,16 +1225,6 @@
                     "NDWI": {
                         "channels": "cch2, cch3a",
                         "calib_cfg": {
-                            "cch2": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
-                            "cch3a": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            }
                         },
                         "lua": "scripted_compos/ndwi.lua",
                         "description": "descriptions/NDWI.md",
@@ -2477,6 +2427,18 @@
                         ],
                         "autogen": true
                     },
+                    "ABI Visible False Color": {
+                        "equation": "cch2^0.45454545454,(cch2^0.45454545454)*0.45+(cch3^0.45454545454)*0.1+(cch1^0.45454545454)*0.45,cch1^0.45454545454",
+                        "draw_map_overlay": true,
+                        "borders_color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "calib_cfg": {
+                        },
+                        "autogen": true
+                    },
                     "ABI False Color IR Merge": {
                         "channels": "ch2, ch13",
                         "cpp": "goes_abi_false_color_ir_merge",
@@ -2520,6 +2482,33 @@
                             1.0
                         ],
                         "autogen": false
+                    },
+                    "Day Cloud Phase Distinction": {
+                        "equation": "1-cch13, cch2, cch5",
+                        "remove_background": true,
+                        "draw_map_overlay": true,
+                        "calib_cfg": {
+                            "cch2": {
+                                "type": "albedo",
+                                "min": 0,
+                                "max": 0.78
+                            },
+                            "cch5": {
+                                "type": "albedo",
+                                "min": 0.01,
+                                "max": 0.59
+                            },
+                            "cch13": {
+                                "type": "temperature",
+                                "min": 219.65,
+                                "max": 280.65
+                            }
+                        },
+                        "borders_color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
                     },
                     "ABI Split Window Difference": {
                         "channels": "cch13, cch15",
@@ -2693,11 +2682,6 @@
                             1.0
                         ],
                         "calib_cfg": {
-                            "cch2": {
-                                "type": "albedo",
-                                "min": 0,
-                                "max": 1
-                            },
                             "cch13": {
                                 "type": "temperature",
                                 "min": 203,
@@ -2948,6 +2932,18 @@
                 "handler": "image_handler",
                 "name": "AHI",
                 "rgb_composites": {
+                    "AHI Visible False Color": {
+                        "equation": "cch3^0.45454545454,(cch2^0.45454545454)*0.93+(cch4^0.45454545454)*0.07,cch1^0.45454545454",
+                        "draw_map_overlay": true,
+                        "borders_color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "calib_cfg": {
+                        },
+                        "autogen": true
+                    },
                     "AHI False Color (WIP)": {
                         "channels": "ch3, ch13",
                         "cpp": "goes_abi_false_color",
@@ -3025,6 +3021,34 @@
                 "handler": "image_handler",
                 "name": "AMI",
                 "rgb_composites": {
+                    "AMI Natural Color": {
+                        "equation": "cchNR016,cchVI008,cchVI006",
+                        "remove_background": true,
+                        "draw_map_overlay": true,
+                        "calib_cfg": {
+                            "cchNR016": {
+                                "type": "albedo",
+                                "min": 0,
+                                "max": 1
+                            },
+                            "cchVI008": {
+                                "type": "albedo",
+                                "min": 0,
+                                "max": 1
+                            },
+                            "cchVI006": {
+                                "type": "albedo",
+                                "min": 0,
+                                "max": 1
+                            }
+                        },
+                        "borders_color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "autogen": true
+                    },
                     "MCIR": {
                         "channels": "cchIR105",
                         "cpp": "underlay_with_clouds",

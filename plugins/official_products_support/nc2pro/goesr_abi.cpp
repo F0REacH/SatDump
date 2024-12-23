@@ -1,30 +1,20 @@
 #define _USE_MATH_DEFINES
-#include "mtg_fci.h"
 
-#include "libs/rapidxml.hpp"
 #include "common/utils.h"
 
-#include <hdf5.h>
+#include "hdf5_utils.h"
 #include <H5LTpublic.h>
 #include "common/image/image.h"
 #include <filesystem>
 #include "logger.h"
 #include <array>
 #include "products/image_products.h"
-#include "libs/miniz/miniz.h"
-
-#include "common/projection/projs2/proj_json.h"
 #include "common/calibration.h"
 
 #include "nlohmann/json_utils.h"
 #include "resources.h"
 
 #include "core/exception.h"
-
-extern "C"
-{
-    void register_MTG_FILTER();
-}
 
 namespace nc2pro
 {
@@ -38,17 +28,13 @@ namespace nc2pro
         double perspective_point_height;
         double calibration_scale;
         double calibration_offset;
+        double kappa;
         time_t timestamp;
         std::string goes_sat;
         std::string time_coverage_start;
     };
 
-    int hdf5_get_int(hid_t &file, std::string path);
-    float hdf5_get_float_attr(hid_t &file, std::string path, std::string attr);
-    std::string hdf5_get_string_attr_FILE(hid_t &file, std::string attr);
-    std::string hdf5_get_string_attr_FILE_fixed(hid_t &file, std::string attr);
-
-    ParsedGOESRABI parse_goes_abi_netcdf_fulldisk(std::vector<uint8_t> data)
+    ParsedGOESRABI parse_goes_abi_netcdf(std::vector<uint8_t> &data)
     {
         ParsedGOESRABI image_out;
 
@@ -93,7 +79,9 @@ namespace nc2pro
             image_out.time_coverage_start = hdf5_get_string_attr_FILE_fixed(file, "time_coverage_start");
             image_out.calibration_scale = hdf5_get_float_attr(file, "Rad", "scale_factor");
             image_out.calibration_offset = hdf5_get_float_attr(file, "Rad", "add_offset");
+            image_out.kappa = hdf5_get_float(file, "kappa0");
             int bit_depth = hdf5_get_float_attr(file, "Rad", "sensor_band_bit_depth");
+            int bit_depth_exponentiation = pow(2, bit_depth) - 1;
 
             image_out.calibration_scale /= pow(2, 14 - bit_depth);
 
@@ -120,7 +108,7 @@ namespace nc2pro
             H5Sget_simple_extent_dims(dataspace, image_dims, NULL);
 
             if (rank != 2)
-                return image_out;
+                goto close;
 
             hid_t memspace = H5Screate_simple(2, image_dims, NULL);
 
@@ -129,7 +117,7 @@ namespace nc2pro
             H5Dread(dataset, H5T_NATIVE_UINT16, memspace, dataspace, H5P_DEFAULT, (uint16_t *)img.raw_data());
 
             for (size_t i = 0; i < img.size(); i++)
-                if (img.get(i) == (pow(2, bit_depth) - 1))
+                if (img.get(i) == bit_depth_exponentiation)
                     img.set(i, 0);
                 else
                     img.set(i, img.get(i) << (16 - bit_depth));
@@ -145,84 +133,15 @@ namespace nc2pro
         return image_out;
     }
 
-    void process_goesr_abi(std::string nc_file, std::string pro_output_file, double *progess)
+    void process_goesr_abi(std::string nc_file, std::string pro_output_file, double *progress)
     {
-        //          double calibration_scale[16] = {0};
-        //     double calibration_offset[16] = {0};
-
         float center_longitude = 0;
         std::vector<ParsedGOESRABI> all_images;
 
         time_t prod_timestamp = 0;
         std::string satellite = "Unknown GOES-R";
 
-        /*{
-            mz_zip_archive zip{};
-            mz_zip_reader_init_file(&zip, zip_file.c_str(), 0);
-
-            //        logger->info("%s", mz_zip_get_error_string(mz_zip_get_last_error(&zip)));
-
-            int numfiles = mz_zip_reader_get_num_files(&zip);
-
-            for (int fi = 0; fi < numfiles; fi++)
-            {
-                if (mz_zip_reader_is_file_supported(&zip, fi))
-                {
-                    char filename[1000];
-                    mz_zip_reader_get_filename(&zip, fi, filename, 1000);
-                    std::string name = std::filesystem::path(filename).stem().string();
-                    std::string ext = std::filesystem::path(filename).extension().string();
-                    if (ext == ".nc")
-                    {
-                        logger->info("Chunk : %s", filename);
-
-                        if (name.find("CHK-BODY") != std::string::npos)
-                        {
-                            size_t filesize = 0;
-                            void *file_ptr = mz_zip_reader_extract_to_heap(&zip, fi, &filesize, 0);
-
-                            std::vector<uint8_t> vec((uint8_t *)file_ptr, (uint8_t *)file_ptr + filesize);
-                            auto img = parse_mtg_fci_netcdf_fulldisk(vec);
-                            all_images.push_back(img);
-
-                            if (img.platform_name == "MTI1")
-                                satellite = "MTG-I1";
-                            else if (img.platform_name == "MTI2")
-                                satellite = "MTG-I2";
-
-                            std::tm timeS;
-                            memset(&timeS, 0, sizeof(std::tm));
-                            if (sscanf(img.time_coverage_start.c_str(),
-                                       "%4d%2d%2d%2d%2d%2d",
-                                       &timeS.tm_year, &timeS.tm_mon, &timeS.tm_mday,
-                                       &timeS.tm_hour, &timeS.tm_min, &timeS.tm_sec) == 6)
-                            {
-                                timeS.tm_year -= 1900;
-                                timeS.tm_mon -= 1;
-                                timeS.tm_isdst = -1;
-                                time_t ctime = timegm(&timeS);
-                                if (ctime < prod_timestamp || prod_timestamp == 0)
-                                    prod_timestamp = ctime;
-                            }
-
-                            for (int i = 0; i < 16; i++)
-                            {
-                                calibration_scale[i] = img.calibration_scale[i];
-                                calibration_offset[i] = img.calibration_offset[i];
-                            }
-
-                            mz_free(file_ptr);
-                        }
-                    }
-                }
-
-                *progess = double(fi) / double(numfiles);
-            }
-
-            mz_zip_reader_end(&zip);
-        }*/
-
-        std::vector<std::string> files_to_parse; //= {nc_file};
+        std::vector<std::string> files_to_parse;
         {
             auto ori_splt = splitString(std::filesystem::path(nc_file).stem().string(), '_');
             if (ori_splt.size() != 6)
@@ -260,7 +179,6 @@ namespace nc2pro
                             ori_splt2[3][2] == splt2[3][2])
                         {
                             files_to_parse.push_back(path);
-                            //                            logger->trace("Selecting " + path);
                         }
                     }
                 }
@@ -272,22 +190,20 @@ namespace nc2pro
             }
         }
 
-        for (auto &f : files_to_parse)
+        for (size_t i = 0; i < files_to_parse.size(); i++)
         {
-            std::vector<uint8_t> nat_file;
-            {
-                std::ifstream input_file(f, std::ios::binary);
-                uint8_t byte;
-                while (!input_file.eof())
-                {
-                    input_file.read((char *)&byte, 1);
-                    nat_file.push_back(byte);
-                    // progress++;
-                }
-            }
+            std::vector<uint8_t> nc_file;
+            std::ifstream input_file(files_to_parse[i], std::ios::binary);
+            input_file.seekg(0, std::ios::end);
+            const size_t nc_size = input_file.tellg();
+            nc_file.resize(nc_size);
+            input_file.seekg(0, std::ios::beg);
+            input_file.read((char*)&nc_file[0], nc_size);
+            input_file.close();
 
-            logger->info("Processing " + f);
-            all_images.push_back(parse_goes_abi_netcdf_fulldisk(nat_file));
+            logger->info("Processing " + files_to_parse[i]);
+            all_images.push_back(parse_goes_abi_netcdf(nc_file));
+            *progress = double(i + 1) / double(files_to_parse.size());
         }
 
         if (prod_timestamp == 0)
@@ -317,7 +233,7 @@ namespace nc2pro
         abi_products.has_timestamps = false;
         abi_products.bit_depth = 14;
 
-        int largest_width = 0, largest_height = 0;
+        size_t largest_width = 0, largest_height = 0;
         ParsedGOESRABI largestImg;
         for (auto &img : all_images)
         {
@@ -335,9 +251,9 @@ namespace nc2pro
                 waslarger = true;
             }
 
+            img.img.clear();
             if (waslarger)
                 largestImg = img;
-            img.img.clear();
 
             if (img.goes_sat == "G16")
                 satellite = "GOES-16";
@@ -362,7 +278,6 @@ namespace nc2pro
             double column_scalar = std::abs(largestImg.perspective_point_height * largestImg.x_scale_factor);
             double column_offset = -largestImg.x_add_offset / largestImg.x_scale_factor;
 
-            constexpr double k = 624597.0334223134;
             double scalar_x = column_scalar;
             double scalar_y = line_scalar;
 
@@ -418,20 +333,26 @@ namespace nc2pro
         };
 
         nlohmann::json calib_cfg;
-        calib_cfg["calibrator"] = "mtg_nc_fci";
-        for (int i = 0; i < all_images.size(); i++)
+        calib_cfg["calibrator"] = "goes_nc_abi";
+        for (size_t i = 0; i < all_images.size(); i++)
         {
             calib_cfg["vars"]["scale"][i] = all_images[i].calibration_scale;
             calib_cfg["vars"]["offset"][i] = all_images[i].calibration_offset;
+            calib_cfg["vars"]["kappa"][i] = all_images[i].kappa;
         }
         abi_products.set_calibration(calib_cfg);
 
         int ii2 = 0;
-        for (int i = 0; i < all_images.size(); i++)
+        for (int i = 0; i < (int)all_images.size(); i++)
         {
-            abi_products.set_calibration_type(ii2, satdump::ImageProducts::CALIB_RADIANCE);
-            abi_products.set_wavenumber(ii2, 1e7 / goes_abi_wavelength_table[all_images[i].channel - 1]);
+            if(all_images[i].kappa > 0)
+                abi_products.set_calibration_type(ii2, satdump::ImageProducts::CALIB_REFLECTANCE);
+            else
+                abi_products.set_calibration_type(ii2, satdump::ImageProducts::CALIB_RADIANCE);
+
             abi_products.set_calibration_default_radiance_range(ii2, goes_abi_radiance_ranges_table[all_images[i].channel - 1][0], goes_abi_radiance_ranges_table[all_images[i].channel - 1][1]);
+
+            abi_products.set_wavenumber(ii2, 1e7 / goes_abi_wavelength_table[all_images[i].channel - 1]);
             ii2++;
         }
 #endif
