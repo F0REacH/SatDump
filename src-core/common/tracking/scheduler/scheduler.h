@@ -190,6 +190,7 @@ namespace satdump
         std::vector<TrackedObject> enabled_satellites;
 
         std::mutex upcoming_satellite_passes_mtx;
+        std::vector<SatellitePass> upcoming_satellite_passes_raw;
         std::vector<SatellitePass> upcoming_satellite_passes_all;
         std::vector<SatellitePass> upcoming_satellite_passes_sel;
 
@@ -218,7 +219,5 @@ namespace satdump
         void renderAutotrackConfig(double curr_time);
 
         image::Image getScheduleImage(int width, double curr_time);
-
-        std::vector<SatellitePass> getSchedule();
     };
 }

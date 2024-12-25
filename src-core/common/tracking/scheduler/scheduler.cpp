@@ -93,7 +93,7 @@ namespace satdump
                         if (v.norad == upcoming_satellite_passes_sel[0].norad)
                             obj = v;
                     eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
-                    eng_all_callback(upcoming_satellite_passes_sel);
+                    eng_all_callback(upcoming_satellite_passes_raw);
                 }
             }
             else
@@ -132,7 +132,7 @@ namespace satdump
                             if (v.norad == upcoming_satellite_passes_sel[0].norad)
                                 obj = v;
                         eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
-                        eng_all_callback(upcoming_satellite_passes_sel);
+                        eng_all_callback(upcoming_satellite_passes_raw);
                     }
                 }
             }
@@ -144,7 +144,8 @@ namespace satdump
     void AutoTrackScheduler::updateAutotrackPasses(double curr_time, double prediction_range_in_sec)
     {
         logger->debug("Start update of Autotrack passes");
-        upcoming_satellite_passes_all.clear();
+
+        upcoming_satellite_passes_raw.clear();
 
         for (TrackedObject &obj : enabled_satellites)
         {
@@ -169,11 +170,13 @@ namespace satdump
                 auto passes = getPassesForSatellite(obj.norad, curr_time, prediction_range_in_sec, qth_lon, qth_lat, qth_alt);
                 for (auto &pass : passes)
                     if (pass.max_elevation > obj.min_elevation)
-                        upcoming_satellite_passes_all.push_back(pass);
+                        upcoming_satellite_passes_raw.push_back(pass);
             }
         }
 
-        upcoming_satellite_passes_all = filterPassesByElevation(upcoming_satellite_passes_all, autotrack_cfg.autotrack_min_elevation, 90); // TODO
+        // TODO trim upcoming_satellite_passes_raw to 12 hours max
+        upcoming_satellite_passes_all.clear();
+        upcoming_satellite_passes_all = filterPassesByElevation(upcoming_satellite_passes_raw, autotrack_cfg.autotrack_min_elevation, 90); // TODO
 
         std::sort(upcoming_satellite_passes_all.begin(), upcoming_satellite_passes_all.end(),
                   [](SatellitePass &el1,
@@ -221,7 +224,7 @@ namespace satdump
                 if (v.norad == upcoming_satellite_passes_sel[0].norad)
                     obj = v;
             eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
-            eng_all_callback(upcoming_satellite_passes_sel);
+            eng_all_callback(upcoming_satellite_passes_raw);
             autotrack_pass_has_started = false;
         }
         else
@@ -274,13 +277,5 @@ namespace satdump
         upcoming_satellite_passes_mtx.lock();
         autotrack_cfg = v;
         upcoming_satellite_passes_mtx.unlock();
-    }
-
-    std::vector<SatellitePass> AutoTrackScheduler::getSchedule()
-    {
-        upcoming_satellite_passes_mtx.lock();
-        std::vector<SatellitePass> v = upcoming_satellite_passes_sel;
-        upcoming_satellite_passes_mtx.unlock();
-        return v;
     }
 }

@@ -25,6 +25,7 @@ void AutoTrackApp::setup_webserver()
             live_pipeline_mtx.unlock();
 
             p["object_tracker"] = object_tracker.getStatus();
+            // TODO add autotrack_cfg.autotrack_min_elevation
             p["frequency"] = source_ptr->get_frequency();
 
             vfos_mtx.lock();
