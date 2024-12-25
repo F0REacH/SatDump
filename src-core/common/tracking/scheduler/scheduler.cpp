@@ -141,8 +141,9 @@ namespace satdump
         }
     }
 
-    void AutoTrackScheduler::updateAutotrackPasses(double curr_time)
+    void AutoTrackScheduler::updateAutotrackPasses(double curr_time, double prediction_range_in_sec)
     {
+        logger->debug("Start update of Autotrack passes");
         upcoming_satellite_passes_all.clear();
 
         for (TrackedObject &obj : enabled_satellites)
@@ -151,7 +152,7 @@ namespace satdump
             if (obj.norad == 41105)
             {
                 std::vector<satdump::SatellitePass> dump_passes;
-                for (uint64_t ctime = curr_time; ctime < curr_time + 12 * 3600; ctime++)
+                for (uint64_t ctime = curr_time; ctime < curr_time + prediction_range_in_sec; ctime++)
                 {
                     if ((ctime - 9 * 60) % (30 * 60) == 0)
                     {
@@ -165,7 +166,7 @@ namespace satdump
             else
 #endif
             {
-                auto passes = getPassesForSatellite(obj.norad, curr_time, 12 * 3600, qth_lon, qth_lat, qth_alt);
+                auto passes = getPassesForSatellite(obj.norad, curr_time, prediction_range_in_sec, qth_lon, qth_lat, qth_alt);
                 for (auto &pass : passes)
                     if (pass.max_elevation > obj.min_elevation)
                         upcoming_satellite_passes_all.push_back(pass);
@@ -194,6 +195,7 @@ namespace satdump
         //               timestamp_to_string(ppp.aos_time).c_str(),
         //               timestamp_to_string(ppp.los_time).c_str(),
         //               ppp.max_elevation);
+        logger->debug("Finished update of Autotrack passes");
     }
 
     void AutoTrackScheduler::setQTH(double qth_lon, double qth_lat, double qth_alt)

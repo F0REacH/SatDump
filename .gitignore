@@ -1,5 +1,6 @@
 .vscode
 build
+cmake-build-debug
 android/local.properties
 android/SatDump/.cxx
 android/.gradle
