@@ -197,7 +197,7 @@ namespace satdump
         bool autotrack_engaged = false;
 
         void processAutotrack(double curr_time);
-        void updateAutotrackPasses(double curr_time, double prediction_range_in_sec = 30 * 24 * 3600);
+        void updateAutotrackPasses(double curr_time, double prediction_raw_timespan = 30 * 24 * 3600, double prediction_timespan = 12 * 3600);
 
         bool autotrack_pass_has_started = false;
 

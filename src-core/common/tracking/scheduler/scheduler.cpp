@@ -141,7 +141,7 @@ namespace satdump
         }
     }
 
-    void AutoTrackScheduler::updateAutotrackPasses(double curr_time, double prediction_range_in_sec)
+    void AutoTrackScheduler::updateAutotrackPasses(double curr_time, double prediction_raw_timespan, double prediction_timespan)
     {
         logger->debug("Start update of Autotrack passes");
 
@@ -153,7 +153,7 @@ namespace satdump
             if (obj.norad == 41105)
             {
                 std::vector<satdump::SatellitePass> dump_passes;
-                for (uint64_t ctime = curr_time; ctime < curr_time + prediction_range_in_sec; ctime++)
+                for (uint64_t ctime = curr_time; ctime < curr_time + prediction_raw_timespan; ctime++)
                 {
                     if ((ctime - 9 * 60) % (30 * 60) == 0)
                     {
@@ -167,23 +167,29 @@ namespace satdump
             else
 #endif
             {
-                auto passes = getPassesForSatellite(obj.norad, curr_time, prediction_range_in_sec, qth_lon, qth_lat, qth_alt);
+                auto passes = getPassesForSatellite(obj.norad, curr_time, prediction_raw_timespan, qth_lon, qth_lat, qth_alt);
                 for (auto &pass : passes)
                     if (pass.max_elevation > obj.min_elevation)
                         upcoming_satellite_passes_raw.push_back(pass);
             }
         }
 
-        // TODO trim upcoming_satellite_passes_raw to 12 hours max
-        upcoming_satellite_passes_all.clear();
-        upcoming_satellite_passes_all = filterPassesByElevation(upcoming_satellite_passes_raw, autotrack_cfg.autotrack_min_elevation, 90); // TODO
-
-        std::sort(upcoming_satellite_passes_all.begin(), upcoming_satellite_passes_all.end(),
+        std::sort(upcoming_satellite_passes_raw.begin(), upcoming_satellite_passes_raw.end(),
                   [](SatellitePass &el1,
                      SatellitePass &el2)
                   {
                       return el1.aos_time < el2.aos_time;
                   });
+
+
+        upcoming_satellite_passes_all.clear();
+        for (auto &pass : upcoming_satellite_passes_raw)
+            if (pass.aos_time < (curr_time + prediction_timespan))
+                upcoming_satellite_passes_all.push_back(pass);
+            else
+                break;
+
+        upcoming_satellite_passes_all = filterPassesByElevation(upcoming_satellite_passes_raw, autotrack_cfg.autotrack_min_elevation, 90);
 
         upcoming_satellite_passes_sel.clear();
 
