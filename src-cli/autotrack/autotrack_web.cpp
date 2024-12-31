@@ -25,7 +25,6 @@ void AutoTrackApp::setup_webserver()
             live_pipeline_mtx.unlock();
 
             p["object_tracker"] = object_tracker.getStatus();
-            // TODO add autotrack_cfg.autotrack_min_elevation
             p["frequency"] = source_ptr->get_frequency();
 
             vfos_mtx.lock();
@@ -55,6 +54,7 @@ void AutoTrackApp::setup_webserver()
                 p["recording"]["written_raw_size"] = file_sink->get_written_raw();
             }
 
+            p["min_elevation"] = d_settings["tracking"]["autotrack_cfg"]["autotrack_min_elevation"];
             live_pipeline_mtx.lock();
             p["tracked_satellite_objects"] = object_tracker.getTrackedSatelliteObjects();
 
