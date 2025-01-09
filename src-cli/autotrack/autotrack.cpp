@@ -50,6 +50,7 @@ AutoTrackApp::AutoTrackApp(nlohmann::json settings, nlohmann::json parameters, s
                 {
                     selected_src = src;
                     src_found = true;
+                    logger->debug("Selected device by source_id: " + hdl_dev_id);
                 }
             }
             else
