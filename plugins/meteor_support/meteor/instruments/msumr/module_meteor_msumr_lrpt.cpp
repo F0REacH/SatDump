@@ -30,7 +30,7 @@ namespace meteor
             product.instrument_name = "msu_mr";
             product.has_timestamps = true;
             product.timestamp_type = satdump::ImageProducts::TIMESTAMP_MULTIPLE_LINES;
-            product.set_tle(satdump::general_tle_registry.get_from_norad_time(norad, timestamp));
+            product.set_tle(satdump::general_tle_registry->get_from_norad_time(norad, timestamp));
             if (msumr_serial_number == 0) // M2
                 product.set_proj_cfg(loadJsonFile(resources::getResourcePath("projections_settings/meteor_m2_msumr_lrpt.json")));
             else if (msumr_serial_number == 3) // M2-3
@@ -146,33 +146,40 @@ namespace meteor
                     {
                         msureader.work(pkt);
 
-                        if (pkt.header.apid == 70 && pkt.payload.size() >= 62)
+                        if (pkt.header.apid == 70)
                         {
-                            // Telemetry Timestamp
-                            if (meteorm2x_mode)
-                                telemetry_timestamps[ccsds::parseCCSDSTimeFullRaw(&pkt.payload.data()[0], 11322)] = msumr_ids.size();
-                            else
-                                telemetry_timestamps[ccsds::parseCCSDSTimeFullRaw(&pkt.payload.data()[0], 0)] = msumr_ids.size();
-
-                            // ID parsing
-                            uint8_t msumr_id = pkt.payload[8 + 12] >> 4;
-                            msumr_ids.push_back(msumr_id);
-                            parseMSUMRTelemetry(msu_mr_telemetry, msu_mr_telemetry_calib, msumr_ids.size() - 1, &pkt.payload[8]);
-
-                            // Convert calibration data
-                            uint16_t words10_bits[12];
-                            for (int n = 0; n < 3; n++)
+                            if (pkt.payload.size() >= 16)
                             {
-                                int bitpos = 43 + n * 5;
-                                // Convert 5 bytes to 4 10-bits values
-                                words10_bits[n * 4 + 0] = ((pkt.payload[bitpos] << 2) | (pkt.payload[bitpos + 1] >> 6));
-                                words10_bits[n * 4 + 1] = (((pkt.payload[bitpos + 1] % 64) << 4) | (pkt.payload[bitpos + 2] >> 4));
-                                words10_bits[n * 4 + 2] = (((pkt.payload[bitpos + 2] % 16) << 6) | (pkt.payload[bitpos + 3] >> 2));
-                                words10_bits[n * 4 + 3] = (((pkt.payload[bitpos + 3] % 4) << 8) | pkt.payload[bitpos + 4]);
+                                // Telemetry Timestamp
+                                if (meteorm2x_mode)
+                                    telemetry_timestamps[ccsds::parseCCSDSTimeFullRaw(&pkt.payload.data()[0], 11322)] = msumr_ids.size();
+                                else
+                                    telemetry_timestamps[ccsds::parseCCSDSTimeFullRaw(&pkt.payload.data()[0], 0)] = msumr_ids.size();
+
+                                // ID parsing
+                                uint8_t msumr_id = pkt.payload[8 + 12] >> 4;
+                                msumr_ids.push_back(msumr_id);
                             }
 
-                            for (int channel = 0; channel < 6; channel++)
-                                calibration_info[channel].push_back({words10_bits[channel * 2], words10_bits[channel * 2 + 1]});
+                            if (pkt.payload.size() >= 62)
+                            {
+                                parseMSUMRTelemetry(msu_mr_telemetry, msu_mr_telemetry_calib, msumr_ids.size() - 1, &pkt.payload[8]);
+
+                                // Convert calibration data
+                                uint16_t words10_bits[12];
+                                for (int n = 0; n < 3; n++)
+                                {
+                                    int bitpos = 43 + n * 5;
+                                    // Convert 5 bytes to 4 10-bits values
+                                    words10_bits[n * 4 + 0] = ((pkt.payload[bitpos] << 2) | (pkt.payload[bitpos + 1] >> 6));
+                                    words10_bits[n * 4 + 1] = (((pkt.payload[bitpos + 1] % 64) << 4) | (pkt.payload[bitpos + 2] >> 4));
+                                    words10_bits[n * 4 + 2] = (((pkt.payload[bitpos + 2] % 16) << 6) | (pkt.payload[bitpos + 3] >> 2));
+                                    words10_bits[n * 4 + 3] = (((pkt.payload[bitpos + 3] % 4) << 8) | pkt.payload[bitpos + 4]);
+                                }
+
+                                for (int channel = 0; channel < 6; channel++)
+                                    calibration_info[channel].push_back({ words10_bits[channel * 2], words10_bits[channel * 2 + 1] });
+                            }
                         }
                     }
                 }
