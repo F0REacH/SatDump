@@ -290,6 +290,31 @@ std::string prepareAutomatedPipelineFolder(time_t timevalue, double frequency, s
     return output_dir;
 }
 
+const std::string LOCK_FILE_NAME = ".lock";
+
+void create_dir_lock(const std::string& dir)
+{
+    std::filesystem::path lock_file_path = std::filesystem::path(dir) / LOCK_FILE_NAME;
+    std::ofstream lock_file(lock_file_path);
+    if (!lock_file)
+    {
+        logger->error("Failed to create lock file: " + lock_file_path.string());
+        return;
+    }
+    
+    lock_file << "LOCKED" << std::endl;
+    lock_file.close();
+    
+    logger->debug("Lock file created: " + lock_file_path.string());
+}
+
+void remove_dir_lock(const std::string& dir)
+{
+    std::filesystem::path lock_file_path = std::filesystem::path(dir) / LOCK_FILE_NAME;
+    std::filesystem::remove(lock_file_path);
+    logger->debug("Lock file removed: " + lock_file_path.string());
+}
+
 std::string prepareBasebandFileName(double timeValue_precise, uint64_t samplerate, uint64_t frequency)
 {
     const time_t timevalue = timeValue_precise;

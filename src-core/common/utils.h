@@ -201,6 +201,9 @@ std::wstring s2ws(const std::string &str);
 std::string prepareAutomatedPipelineFolder(time_t timevalue, double frequency, std::string pipeline_name, std::string folder = "");
 std::string prepareBasebandFileName(double timeValue_precise, uint64_t samplerate, uint64_t frequency);
 
+void create_dir_lock(const std::string& dir);
+void remove_dir_lock(const std::string& dir);
+
 void hsv_to_rgb(float h, float s, float v, uint8_t *rgb);
 
 inline int ensureIs2Multiple(int v)
