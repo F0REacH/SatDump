@@ -82,6 +82,8 @@ private:
 
     std::shared_ptr<dsp::FileSinkBlock> file_sink;
 
+    static const std::string LOCK_FILE_NAME;
+
     void start_recording();
     void stop_recording();
 
@@ -114,6 +116,9 @@ private: // VFO Stuff
     void add_vfo_live(std::string id, std::string name, double freq, satdump::Pipeline vpipeline, nlohmann::json vpipeline_params);
     void add_vfo_reco(std::string id, std::string name, double freq, dsp::BasebandType type, int decimation = -1);
     void del_vfo(std::string id);
+
+    static void create_dir_lock(const std::string& dir);
+    static void remove_dir_lock(const std::string& dir);
 
 private:
     satdump::ObjectTracker object_tracker;

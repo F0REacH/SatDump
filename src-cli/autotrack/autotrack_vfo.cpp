@@ -82,6 +82,31 @@ void AutoTrackApp::add_vfo_reco(std::string id, std::string name, double freq, d
     vfos_mtx.unlock();
 }
 
+const std::string AutoTrackApp::LOCK_FILE_NAME = ".lock";
+
+void AutoTrackApp::create_dir_lock(const std::string& dir)
+{
+    std::filesystem::path lock_file_path = std::filesystem::path(dir) / AutoTrackApp::LOCK_FILE_NAME;
+    std::ofstream lock_file(lock_file_path);
+    if (!lock_file)
+    {
+        logger->error("Failed to create lock file: " + lock_file_path.string());
+        return;
+    }
+    
+    lock_file << "LOCKED" << std::endl;
+    lock_file.close();
+    
+    logger->debug("Lock file created: " + lock_file_path.string());
+}
+
+void AutoTrackApp::remove_dir_lock(const std::string& dir)
+{
+    std::filesystem::path lock_file_path = std::filesystem::path(dir) / AutoTrackApp::LOCK_FILE_NAME;
+    std::filesystem::remove(lock_file_path);
+    logger->debug("Lock file removed: " + lock_file_path.string());
+}
+
 void AutoTrackApp::del_vfo(std::string id)
 {
     vfos_mtx.lock();
@@ -128,7 +153,9 @@ void AutoTrackApp::del_vfo(std::string id)
                     satdump::Pipeline pipeline = selected_pipeline_;
                     int start_level = pipeline.live_cfg.normal_live[pipeline.live_cfg.normal_live.size() - 1].first;
                     std::string input_level = pipeline.steps[start_level].level_name;
+                    AutoTrackApp::create_dir_lock(pipeline_output_dir_);
                     pipeline.run(input_file, pipeline_output_dir_, pipeline_params_, input_level);
+                    AutoTrackApp::remove_dir_lock(pipeline_output_dir_);
                 };
                 main_thread_pool.push(fun);
             }

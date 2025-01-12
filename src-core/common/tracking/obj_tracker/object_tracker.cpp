@@ -143,7 +143,7 @@ namespace satdump
             {   // skip already found objects
                 if (!norad_to_sat_object.count(tr_obj.norad))
                 {
-                    const auto optionalTLE = general_tle_registry.get_from_norad(tr_obj.norad);
+                    const auto optionalTLE = general_tle_registry->get_from_norad(tr_obj.norad);
                     if (!optionalTLE.has_value())
                     {
                         logger->warn("Could not find in tle registry norad:"+std::to_string(tr_obj.norad));
